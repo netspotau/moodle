@@ -1,0 +1,16 @@
+#page-mod-groupselect-view .managelink, #page-mod-groupselect-limits .managelink {
+  text-align: right;
+}
+
+#page-mod-groupselect-view .mygroup,
+#page-mod-groupselect-view .me {
+  font-weight: bold;
+}
+
+#page-mod-groupselect-view .membershidden {
+  color:#AAAAAA;
+}
+
+#page-mod-groupselect-view .notavailable {
+  color:#AAAAAA;
+}

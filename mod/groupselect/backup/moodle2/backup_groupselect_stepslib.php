@@ -1,0 +1,79 @@
+<?php
+
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * @package moodlecore
+ * @subpackage backup-moodle2
+ * @copyright 2010 onwards Eloy Lafuente (stronk7) {@link http://stronk7.com}
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+/**
+ * Define all the backup steps that will be used by the backup_groupselect_activity_task
+ */
+
+/**
+ * Define the complete groupselect structure for backup, with file and id annotations
+ */
+class backup_groupselect_activity_structure_step extends backup_activity_structure_step {
+
+    protected function define_structure() {
+
+        // To know if we are including userinfo
+        $userinfo = $this->get_setting_value('userinfo');
+
+        // Define each element separated
+
+        $groupselect = new backup_nested_element('groupselect', array('id'), array(
+            'course', 'name', 'intro', 'introformat', 'targetgrouping', 'signuptype',
+            'password', 'maxmembers', 'individual_limits', 'timeavailable',
+            'timedue', 'timecreated', 'timemodified'));
+
+        $limits = new backup_nested_element('limits');
+
+        $limit = new backup_nested_element('limit', array('id'), array(
+            'groupselect', 'groupid', 'lim'));
+
+        // Build the tree
+
+        $groupselect->add_child($limits);
+        $limits->add_child($limit);
+
+        // Define sources
+
+        $groupselect->set_source_table('groupselect', array('id' => backup::VAR_ACTIVITYID));
+        $limit->set_source_sql('
+            SELECT *
+              FROM {groupselect_limits}
+              WHERE groupselect = ?',
+            array(backup::VAR_PARENTID));
+
+        // Define id annotations
+
+        $groupselect->annotate_ids('grouping', 'targetgrouping');
+
+        $limit->annotate_ids('group', 'groupid');
+
+        // Define file annotations
+
+        $groupselect->annotate_files('mod_groupselect', 'intro', null); // This file area hasn't itemid
+
+        // Return the root element (groupselect), wrapped into standard activity structure
+        return $this->prepare_activity_structure($groupselect);
+    }
+
+}
