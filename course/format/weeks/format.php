@@ -139,6 +139,9 @@ defined('MOODLE_INTERNAL') || die();
 
         if (!empty($sections[$section])) {
             $thissection = $sections[$section];
+            //Checking availability conditions
+            $si = new condition_info_section($thissection);
+            $thissection->is_available = $si->is_available($thissection->information, true, $USER->id); //if not available 'information' will tell why
 
         } else {
             unset($thissection);
@@ -151,7 +154,7 @@ defined('MOODLE_INTERNAL') || die();
             $thissection->id = $DB->insert_record('course_sections', $thissection);
         }
 
-        $showsection = (has_capability('moodle/course:viewhiddensections', $context) or $thissection->visible or !$course->hiddensections);
+        $showsection = !$course->hiddensections && (has_capability('moodle/course:viewhiddensections', $context) || ($thissection->visible && ($thissection->is_available || $thissection->showavailability)));
 
         if (!empty($displaysection) and $displaysection != $section) {  // Check this week is visible
             if ($showsection) {
@@ -215,14 +218,26 @@ defined('MOODLE_INTERNAL') || die();
             $weekperiod = $weekday.' - '.$endweekday;
 
             echo '<div class="content">';
-            if (!has_capability('moodle/course:viewhiddensections', $context) and !$thissection->visible) {   // Hidden for students
+            if (!has_capability('moodle/course:viewhiddensections', $context) && (!$thissection->visible || (!$thissection->is_available && $thissection->showavailability==1)) ) {   // Hidden for students
                 echo $OUTPUT->heading($currenttext.$weekperiod.' ('.get_string('notavailable').')', 3, 'weekdates');
-
+                echo '<div class="availabilityinfo">';
+                if (!empty($thissection->information)) {
+                    echo $thissection->information;
+                } else {
+                    echo get_string('notavailable');
+                }
+                echo '</div>';
             } else {
                 if (isset($thissection->name) && ($thissection->name !== NULL)) {  // empty string is ok
                     echo $OUTPUT->heading($thissection->name, 3, 'weekdates');
                 } else {
                     echo $OUTPUT->heading($currenttext.$weekperiod, 3, 'weekdates');
+                }
+                if (!empty($thissection->information))
+                {
+                    echo '<div class="availabilityinfo">';
+                    echo $thissection->information;
+                    echo '</div>';
                 }
                 echo '<div class="summary">';
                 $coursecontext = get_context_instance(CONTEXT_COURSE, $course->id);

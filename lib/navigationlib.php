@@ -28,6 +28,9 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+require_once($CFG->libdir.'/conditionlib_section.php');
+require_once($CFG->libdir.'/completionlib.php');
+
 /**
  * The name that will be used to separate the navigation cache within SESSION
  */
@@ -1547,9 +1550,19 @@ class global_navigation extends navigation_node {
             if ($course->id == SITEID) {
                 $this->load_section_activities($coursenode, $section->section, $activities);
             } else {
-                if ((!$viewhiddensections && !$section->visible) || (!$this->showemptysections && !$section->hasactivites)) {
+                //Checking availability conditions
+                $si = new condition_info_section($section);
+                $section->is_available = $si->is_available($information, true, $USER->id); //if not available 'information' will tell why
+                if (!$section->is_available && $section->showavailability) {
+                    $section->greyout = true;
+                } else {
+                    $section->greyout = false;
+                }                
+
+                if (!$section->is_available || (!$viewhiddensections && !$section->visible) || (!$this->showemptysections && !$section->hasactivites)) {
                     continue;
                 }
+
                 if ($namingfunctionexists) {
                     $sectionname = $namingfunction($course, $section, $sections);
                 } else {
@@ -1559,12 +1572,12 @@ class global_navigation extends navigation_node {
                 $url = null;
                 $sectionnode = $coursenode->add($sectionname, $url, navigation_node::TYPE_SECTION, null, $section->id);
                 $sectionnode->nodetype = navigation_node::NODETYPE_BRANCH;
-                $sectionnode->hidden = (!$section->visible);
+                $sectionnode->hidden = (!$section->visible || $section->greyout);
                 if ($this->page->context->contextlevel != CONTEXT_MODULE && $section->hasactivites && ($sectionnode->isactive || ($activesection && $section->section == $activesection))) {
                     $sectionnode->force_open();
                     $this->load_section_activities($sectionnode, $section->section, $activities);
                 }
-                $section->sectionnode = $sectionnode;
+                $section->sectionnode = $sectionnode;   
                 $navigationsections[$sectionid] = $section;
             }
         }

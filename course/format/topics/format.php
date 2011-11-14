@@ -136,7 +136,9 @@ while ($section <= $course->numsections) {
 
     if (!empty($sections[$section])) {
         $thissection = $sections[$section];
-
+        //Checking availability conditions
+        $si = new condition_info_section($thissection);
+        $thissection->is_available = $si->is_available($thissection->information, true, $USER->id); //if not available 'information' will tell why
     } else {
         $thissection = new stdClass;
         $thissection->course  = $course->id;   // Create a new section structure
@@ -148,7 +150,7 @@ while ($section <= $course->numsections) {
         $thissection->id = $DB->insert_record('course_sections', $thissection);
     }
 
-    $showsection = (has_capability('moodle/course:viewhiddensections', $context) or $thissection->visible or !$course->hiddensections);
+    $showsection = !$course->hiddensections && (has_capability('moodle/course:viewhiddensections', $context) || ($thissection->visible && ($thissection->is_available || $thissection->showavailability)));
 
     if (!empty($displaysection) and $displaysection != $section) {  // Check this topic is visible
         if ($showsection) {
@@ -215,11 +217,23 @@ while ($section <= $course->numsections) {
         echo '</div>';
 
         echo '<div class="content">';
-        if (!has_capability('moodle/course:viewhiddensections', $context) and !$thissection->visible) {   // Hidden for students
-            echo get_string('notavailable');
+        if (!has_capability('moodle/course:viewhiddensections', $context) && (!$thissection->visible || (!$thissection->is_available && $thissection->showavailability==1)) ) {   // Hidden for students
+            echo '<div class="availabilityinfo">';
+            if (!empty($thissection->information)) {
+                echo $thissection->information;
+            } else {
+                echo get_string('notavailable');
+            }
+            echo '</div>';
         } else {
             if (!is_null($thissection->name)) {
                 echo $OUTPUT->heading($thissection->name, 3, 'sectionname');
+            }
+            if (!empty($thissection->information))
+            {
+                echo '<div class="availabilityinfo">';
+                echo $thissection->information;
+                echo '</div>';
             }
             echo '<div class="summary">';
             if ($thissection->summary) {

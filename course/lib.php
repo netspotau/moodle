@@ -1251,8 +1251,17 @@ function get_all_sections($courseid) {
     global $DB;
     static $coursesections = array();
     if (!array_key_exists($courseid, $coursesections)) {
-        $coursesections[$courseid] = $DB->get_records("course_sections", array("course"=>"$courseid"), "section",
-                           "section, id, course, name, summary, summaryformat, sequence, visible");
+            $coursesections[$courseid] = $DB->get_records_sql($sql="
+SELECT 
+    cs.section as section, cs.id as id, cs.name as name, cs.summary as summary, cs.summaryformat as summaryformat, cs.sequence as sequence, cs.visible as visible, cs.course as course, csadt.availablefrom as availablefrom, csadt.availableuntil as availableuntil, csadt.showavailability as showavailability, csadt.groupingid as groupingid
+FROM
+    {course_sections} cs
+    LEFT JOIN {course_sections_availability_dt} csadt ON cs.id = csadt.coursesectionid
+WHERE
+    cs.course=?
+ORDER BY 
+section",array($courseid));
+    
     }
     return $coursesections[$courseid];
 }
